@@ -107,7 +107,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
+    level = Math.max(baseLevel,Math.floor(lines / 10) + 1);
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     combo++;
     maxCombo = Math.max(maxCombo, combo);
@@ -163,18 +163,11 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  currentSkin.drawBlock(context, x, y, colorIndex, size, alpha);
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = currentSkin.gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -191,7 +184,8 @@ function drawGrid() {
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = currentSkin.boardBg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   drawGrid();
 
   // board
@@ -214,7 +208,8 @@ function draw() {
 
 function drawNext() {
   const NB = 30;
-  nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  nextCtx.fillStyle = currentSkin.boardBg;
+  nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
   const shape = next.shape;
   const offX = Math.floor((4 - shape[0].length) / 2);
   const offY = Math.floor((4 - shape.length) / 2);
@@ -236,13 +231,13 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    closePauseMenu();
     lastTime = performance.now();
+    dropAccum = 0;
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    openPauseMenu();
   }
 }
 
@@ -271,16 +266,18 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  baseLevel = startLevel;
+  level = baseLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  closePauseMenu();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -290,11 +287,14 @@ document.addEventListener('keydown', e => {
     if (e.code === 'Enter' && e.target.tagName !== 'BUTTON') init();
     return;
   }
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
+  if (e.target.tagName === 'INPUT') {
     if (e.target.id === 'record-name' && e.code === 'Enter') saveNameRecord();
     return;
   }
-  if (e.code === 'KeyP') { togglePause(); return; }
+  // un botón con foco conserva sus teclas, salvo con el menú de pausa abierto (P/Esc deben cerrarlo)
+  if (e.target.tagName === 'BUTTON' && !isPauseMenuOpen()) return;
+  if (e.target.id === 'skin-select') e.target.blur(); // las teclas son del juego, no del select
+  if (handlePauseKey(e)) return;
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -373,3 +373,7 @@ resetOverBtn.addEventListener('click', resetAllRecords);
 
 // Pantalla de inicio: el juego no arranca hasta pulsar Jugar
 renderRecords(startRecords);
+
+// Skin guardado + redibujo inmediato al cambiar (también en pausa/game over; antes de Jugar no hay pieza)
+applySkin(loadSavedSkin());
+initSkinSelect(() => { if (started) { draw(); drawNext(); } });
