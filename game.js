@@ -41,6 +41,7 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let combo, maxCombo, started = false; // records: combo actual y máximo de la partida
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -108,7 +109,11 @@ function clearLines() {
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    combo++;
+    maxCombo = Math.max(maxCombo, combo);
     updateHUD();
+  } else {
+    combo = 0;
   }
 }
 
@@ -224,6 +229,7 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  showGameOverRecords();
 }
 
 function togglePause() {
@@ -257,6 +263,11 @@ function loop(ts) {
 }
 
 function init() {
+  started = true;
+  if (document.activeElement) document.activeElement.blur(); // un botón enfocado bloquearía las teclas
+  hideRecordsUI();
+  combo = 0;
+  maxCombo = 0;
   board = createBoard();
   score = 0;
   lines = 0;
@@ -275,6 +286,14 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (!started) {
+    if (e.code === 'Enter' && e.target.tagName !== 'BUTTON') init();
+    return;
+  }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
+    if (e.target.id === 'record-name' && e.code === 'Enter') saveNameRecord();
+    return;
+  }
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -301,4 +320,56 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
-init();
+// ---- Records (UI; lógica en records.js) ----
+const startScreen = document.getElementById('start-screen');
+const startRecords = document.getElementById('start-records');
+const overRecords = document.getElementById('over-records');
+const recordEntry = document.getElementById('record-entry');
+const recordName = document.getElementById('record-name');
+const resetOverBtn = document.getElementById('reset-over-btn');
+
+function hideRecordsUI() {
+  startScreen.classList.add('hidden');
+  recordEntry.classList.add('hidden');
+  overRecords.classList.add('hidden');
+  resetOverBtn.classList.add('hidden');
+}
+
+function showGameOverRecords() {
+  updateRecordStats(maxCombo, lines);
+  resetOverBtn.classList.remove('hidden');
+  if (qualifiesForTop(score)) {
+    recordName.value = '';
+    recordEntry.classList.remove('hidden');
+    overRecords.classList.add('hidden');
+    setTimeout(() => recordName.focus(), 300); // evita que la tecla del último bloqueo escriba en el input
+  } else {
+    renderRecords(overRecords);
+    overRecords.classList.remove('hidden');
+  }
+}
+
+function saveNameRecord() {
+  const idx = addRecord(recordName.value, score, lines, level);
+  recordEntry.classList.add('hidden');
+  renderRecords(overRecords, idx);
+  overRecords.classList.remove('hidden');
+  recordName.blur();
+}
+
+function resetAllRecords() {
+  resetRecords();
+  renderRecords(startRecords);
+  renderRecords(overRecords);
+  // si aún se pedía nombre, ya no hay top que guardar: mostrar la tabla
+  recordEntry.classList.add('hidden');
+  if (gameOver) overRecords.classList.remove('hidden');
+}
+
+document.getElementById('play-btn').addEventListener('click', init);
+document.getElementById('save-record-btn').addEventListener('click', saveNameRecord);
+document.getElementById('reset-start-btn').addEventListener('click', resetAllRecords);
+resetOverBtn.addEventListener('click', resetAllRecords);
+
+// Pantalla de inicio: el juego no arranca hasta pulsar Jugar
+renderRecords(startRecords);
