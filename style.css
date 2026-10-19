@@ -162,6 +162,83 @@ kbd {
   background: #9bbdff;
 }
 
+/* ---- Records y pantalla de inicio ---- */
+.hidden {
+  display: none !important;
+}
+
+#start-screen {
+  background: rgba(10, 10, 20, 0.92);
+  z-index: 2;
+  min-width: 480px;
+}
+
+.start-title {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: #7aa2f7;
+}
+
+.records-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 260px;
+}
+
+.records-table th {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #555570;
+  text-align: left;
+  padding: 4px 10px;
+}
+
+.records-table td {
+  padding: 4px 10px;
+  color: #aaa;
+  font-family: 'Courier New', Courier, monospace;
+  text-align: left;
+}
+
+.records-table tr.highlight td {
+  background: rgba(122, 162, 247, 0.2);
+  color: #ffd54f;
+  font-weight: 700;
+}
+
+.records-table td.records-empty {
+  text-align: center;
+  color: #555570;
+}
+
+.records-stats {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #888;
+}
+
+.record-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: #ffd54f;
+}
+
+.record-entry input {
+  background: #1a1a25;
+  border: 1px solid #3a3a5a;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  font-size: 14px;
+  text-align: center;
+  user-select: text;
+}
+
+.btn {
 /* ---- Menú de pausa ---- */
 #pause-title {
   font-size: 28px;
@@ -181,6 +258,23 @@ kbd {
   font-weight: 700;
   cursor: pointer;
   letter-spacing: 1px;
+}
+
+.btn:hover {
+  background: #9bbdff;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #555570;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-link:hover {
+  color: #e57373;
   transition: background 0.15s;
 }
 
